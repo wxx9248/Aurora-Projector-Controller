@@ -1,0 +1,21 @@
+# Home Assistant build — native encrypted API for HA auto-discovery.
+#   esphome run aurora-projector-ha.yaml
+# Shares all hardware config with the standalone build via common.yaml.
+
+packages:
+  device_base: !include common.yaml
+
+# Optional: distinct hostname for this build. Uncomment to override.
+# substitutions:
+#   name: "aurora-projector-ha"
+
+# Native API for Home Assistant (encrypted). HA will ask for this key when
+# it adopts the device — it's the api_encryption_key in secrets.yaml.
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+# Optional: keep the web UI available alongside HA. Remove if you don't want it.
+web_server:
+  port: 80
+  version: 3

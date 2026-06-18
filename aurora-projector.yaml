@@ -1,0 +1,16 @@
+# Standalone build — browser control, no Home Assistant.
+#   esphome run aurora-projector.yaml
+# Shares all hardware config with the HA build via common.yaml.
+
+packages:
+  device_base: !include common.yaml
+
+# Optional: give this build a distinct hostname so it doesn't clash with the
+# HA build on the network. Uncomment to override common.yaml's substitution.
+# substitutions:
+#   name: "aurora-projector"
+
+# Standalone web UI — control page served at http://<device-ip>/
+web_server:
+  port: 80
+  version: 3

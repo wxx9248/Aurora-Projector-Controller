@@ -1,0 +1,135 @@
+# common.yaml — shared config for all build variants.
+# Do NOT flash this file directly. It is pulled into the entrypoint files
+# (aurora-projector.yaml, aurora-projector-ha.yaml) via `packages:`.
+# Entrypoint files may override any substitution below (e.g. `name`).
+
+substitutions:
+  name: "aurora-projector"
+  friendly_name: "Aurora Projector"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+# ESP32-WROOM-32D is a generic ESP32 module -> board: esp32dev
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Enable logging (view with: esphome logs <entrypoint>.yaml)
+logger:
+
+# Over-the-air updates (after the first USB flash, you can update wirelessly)
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  id: wifi_id
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Fallback hotspot (captive portal) if WiFi connection fails
+  ap:
+    ssid: ${friendly_name}
+    password: !secret ap_password
+
+captive_portal:
+
+# === Aurora Projector hardware ===
+
+# --- PWM outputs (ESP32 LEDC) ---
+output:
+  # RGB LED channels (transistor-driven)
+  - platform: ledc
+    pin: GPIO16
+    id: led_red
+    frequency: 1000 Hz
+  - platform: ledc
+    pin: GPIO17
+    id: led_green
+    frequency: 1000 Hz
+  - platform: ledc
+    pin: GPIO18
+    id: led_blue
+    frequency: 1000 Hz
+
+  # Motor driver transistor (on/off). For variable speed, switch this to a
+  # `ledc` output + a `fan` (speed slider) instead.
+  - platform: gpio
+    pin: GPIO21
+    id: motor_output
+
+  # Onboard status LED — driven automatically by the status interval below
+  - platform: gpio
+    pin: GPIO2
+    id: onboard_led_output
+
+# --- RGB color light (color picker on the web UI) ---
+light:
+  - platform: rgb
+    name: "Projector LEDs"
+    red: led_red
+    green: led_green
+    blue: led_blue
+
+# --- Switches ---
+switch:
+  - platform: output
+    name: "Motor"
+    output: motor_output
+
+# --- Native capacitive touch on GPIO32 (touch channel T9) ---
+# setup_mode: true streams raw touch values to the log so you can calibrate.
+# Watch `esphome logs`, note the touched vs untouched values, set `threshold`
+# between them (on classic ESP32 a touch reads BELOW the threshold), then set
+# setup_mode: false.
+esp32_touch:
+  setup_mode: true
+
+binary_sensor:
+  - platform: esp32_touch
+    name: "Touch Button"
+    pin: GPIO32
+    threshold: 1000
+
+# Restart button, handy for remote reboots
+button:
+  - platform: restart
+    name: "Restart"
+
+# Diagnostics
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+  - platform: uptime
+    name: "Uptime"
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+
+# --- Onboard LED system-status indicator (GPIO2) ---
+# Runs every 100 ms and picks a blink pattern from the WiFi state:
+#   solid on   = WiFi connected
+#   slow blink = connecting / disconnected (trying to reach the router)
+#   fast blink = fallback AP mode (router unreachable, hotspot active)
+interval:
+  - interval: 100ms
+    then:
+      - lambda: |-
+          static uint32_t tick = 0;
+          tick++;
+          bool on;
+          if (id(wifi_id).is_connected()) {
+            on = true;                    // solid: connected
+          } else if (id(wifi_id).is_ap_active()) {
+            on = (tick % 2) == 0;         // fast blink (~5 Hz): AP fallback
+          } else {
+            on = (tick % 10) < 5;         // slow blink (1 Hz): connecting
+          }
+          if (on) id(onboard_led_output).turn_on();
+          else    id(onboard_led_output).turn_off();
