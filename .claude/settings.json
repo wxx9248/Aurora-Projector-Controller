@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.yaml|*.yml) ;; *) exit 0 ;; esac; d=\"${CLAUDE_PROJECT_DIR:-.}\"; cd \"$d\" 2>/dev/null || exit 0; [ -f aurora-projector.yaml ] || exit 0; out=$(esphome config aurora-projector.yaml 2>&1) && out=$(esphome config aurora-projector-ha.yaml 2>&1) || { printf '%s\\n' \"$out\" | tail -20; echo 'esphome config validation FAILED'; exit 2; }",
+            "timeout": 60,
+            "statusMessage": "Validating ESPHome config..."
+          }
+        ]
+      }
+    ]
+  }
+}
