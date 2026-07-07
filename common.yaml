@@ -11,14 +11,17 @@ esphome:
   name: ${name}
   friendly_name: ${friendly_name}
 
-# ESP32-WROOM-32D is a generic ESP32 module -> board: esp32dev
+# ESP32-C3 Super Mini (RISC-V) -> board: esp32-c3-devkitm-1
 esp32:
-  board: esp32dev
+  board: esp32-c3-devkitm-1
   framework:
     type: esp-idf
 
-# Enable logging (view with: esphome logs <entrypoint>.yaml)
+# Enable logging (view with: esphome logs <entrypoint>.yaml).
+# The C3 Super Mini has no USB-UART chip — it logs over the chip's built-in
+# USB Serial/JTAG, so route the logger there (otherwise USB logs are silent).
 logger:
+  hardware_uart: USB_SERIAL_JTAG
 
 # Over-the-air updates (after the first USB flash, you can update wirelessly)
 ota:
@@ -29,6 +32,12 @@ wifi:
   id: wifi_id
   ssid: !secret wifi_ssid
   password: !secret wifi_password
+
+  # ESP32-C3 Super Mini fix: the board browns out at full 20 dBm TX power during
+  # the auth handshake, causing 'Auth Expired' disconnects. Lower TX power and
+  # disable power-save for a stable connection.
+  output_power: 8.5dB
+  power_save_mode: none
 
   # Fallback hotspot (captive portal) if WiFi connection fails
   ap:
@@ -43,27 +52,30 @@ captive_portal:
 output:
   # RGB LED channels (transistor-driven)
   - platform: ledc
-    pin: GPIO16
+    pin: GPIO0
     id: led_red
     frequency: 1000 Hz
   - platform: ledc
-    pin: GPIO17
+    pin: GPIO1
     id: led_green
     frequency: 1000 Hz
   - platform: ledc
-    pin: GPIO18
+    pin: GPIO3
     id: led_blue
     frequency: 1000 Hz
 
   # Motor driver transistor (on/off). For variable speed, switch this to a
   # `ledc` output + a `fan` (speed slider) instead.
   - platform: gpio
-    pin: GPIO21
+    pin: GPIO4
     id: motor_output
 
-  # Onboard status LED — driven automatically by the status interval below
+  # Onboard status LED (C3 Super Mini blue LED on GPIO8, active-low) —
+  # driven automatically by the status interval below
   - platform: gpio
-    pin: GPIO2
+    pin:
+      number: GPIO8
+      inverted: true
     id: onboard_led_output
 
 # --- RGB color light (color picker on the web UI) ---
@@ -79,20 +91,6 @@ switch:
   - platform: output
     name: "Motor"
     output: motor_output
-
-# --- Native capacitive touch on GPIO32 (touch channel T9) ---
-# setup_mode: true streams raw touch values to the log so you can calibrate.
-# Watch `esphome logs`, note the touched vs untouched values, set `threshold`
-# between them (on classic ESP32 a touch reads BELOW the threshold), then set
-# setup_mode: false.
-esp32_touch:
-  setup_mode: true
-
-binary_sensor:
-  - platform: esp32_touch
-    name: "Touch Button"
-    pin: GPIO32
-    threshold: 1000
 
 # Restart button, handy for remote reboots
 button:
@@ -112,7 +110,7 @@ text_sensor:
     ip_address:
       name: "IP Address"
 
-# --- Onboard LED system-status indicator (GPIO2) ---
+# --- Onboard LED system-status indicator (GPIO8) ---
 # Runs every 100 ms and picks a blink pattern from the WiFi state:
 #   solid on   = WiFi connected
 #   slow blink = connecting / disconnected (trying to reach the router)
