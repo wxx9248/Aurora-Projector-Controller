@@ -1,8 +1,8 @@
 # Aurora Projector Controller
 
 [ESPHome](https://esphome.io/) firmware for controlling projector hardware with
-an **ESP32-WROOM-32D**. Drives an RGB LED and a motor, and reads a capacitive
-touch button — controllable from a browser **or** Home Assistant.
+an **ESP32-C3 Super Mini**. Drives an RGB LED and a motor — controllable from a
+browser **or** Home Assistant.
 
 A single shared hardware definition (`common.yaml`) is reused by two build
 variants via ESPHome [`packages:`](https://esphome.io/components/packages/), so
@@ -12,21 +12,19 @@ the hardware is defined once and never drifts between builds.
 
 - 🎨 **RGB LED** — full color + brightness via PWM (LEDC), exposed as one light
 - ⚙️ **Motor** — on/off switch (easily extended to PWM speed control)
-- ✋ **Capacitive touch** — native ESP32 touch input on T9
 - 💡 **Status LED** — onboard LED indicates WiFi state at a glance
 - 🌐 **Two builds** — standalone web UI, or encrypted Home Assistant API
 - 🔄 **OTA updates** — flash once over USB, then update wirelessly
 
 ## Hardware
 
-Board: **ESP32-WROOM-32D** (generic `esp32dev`).
+Board: **ESP32-C3 Super Mini** (`esp32-c3-devkitm-1`).
 
-| Function          | GPIO         | Notes |
-|-------------------|--------------|-------|
-| RGB LED — R/G/B   | 16 / 17 / 18 | PWM via transistors (low-side switching) |
-| Motor             | 21           | Transistor driver; **add a flyback diode** across the motor |
-| Capacitive touch  | 32 (T9)      | Native ESP32 touch channel |
-| Onboard status LED| 2            | Auto-driven WiFi indicator (strapping pin — fine as output) |
+| Function          | GPIO      | Notes |
+|-------------------|-----------|-------|
+| RGB LED — R/G/B   | 0 / 1 / 3 | PWM via transistors (low-side switching) |
+| Motor             | 4         | Transistor driver; **add a flyback diode** across the motor |
+| Onboard status LED| 8         | Auto-driven WiFi indicator (active-low; strapping pin — fine as output) |
 
 ## Repository layout
 
@@ -52,7 +50,7 @@ Edit hardware/behavior **once** in `common.yaml` and both builds inherit it.
    openssl rand -base64 32   # api_encryption_key
    openssl rand -hex 16      # ota_password
    ```
-3. Plug the board in via USB (appears as `/dev/ttyUSB0`).
+3. Plug the board in via USB (native USB; appears as `/dev/ttyACM0`).
 4. First flash over USB — pick the build you want:
    ```sh
    esphome run aurora-projector.yaml       # standalone (browser)
@@ -78,17 +76,10 @@ esphome run <file>.yaml       # build + upload (USB or OTA)
 esphome logs <file>.yaml      # stream device logs
 ```
 
-## Status LED legend (onboard GPIO2)
+## Status LED legend (onboard GPIO8)
 
 | LED | Meaning |
 |-----|---------|
 | Solid on | WiFi connected (normal) |
 | Slow blink (1 Hz) | Connecting / lost connection |
 | Fast blink (5 Hz) | Fallback AP mode (router unreachable; hotspot active) |
-
-## Calibration
-
-- **Touch threshold:** `common.yaml` ships with `esp32_touch: setup_mode: true`,
-  which streams raw touch values to the log. Run `esphome logs …`, note the
-  touched vs untouched values, set `threshold` between them (on the classic
-  ESP32 a touch reads *below* the threshold), then set `setup_mode: false`.
