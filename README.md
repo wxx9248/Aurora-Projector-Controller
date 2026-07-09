@@ -14,6 +14,7 @@ the hardware is defined once and never drifts between builds.
 - ⚙️ **Motor** — on/off switch (easily extended to PWM speed control)
 - 💡 **Status LED** — onboard LED indicates WiFi state at a glance
 - 🌐 **Two builds** — standalone web UI, or encrypted Home Assistant API
+- 📶 **Bluetooth proxy** — HA build relays nearby BLE devices to Home Assistant
 - 🔄 **OTA updates** — flash once over USB, then update wirelessly
 
 ## Hardware
@@ -32,7 +33,7 @@ Board: **ESP32-C3 Super Mini** (`esp32-c3-devkitm-1`).
 |------|---------|
 | `common.yaml` | Shared config: board, WiFi, OTA, all hardware + status LED. **Not flashed directly.** |
 | `aurora-projector.yaml` | **Standalone** build — browser control (`web_server`), no HA. |
-| `aurora-projector-ha.yaml` | **Home Assistant** build — encrypted native API. |
+| `aurora-projector-ha.yaml` | **Home Assistant** build — encrypted native API + Bluetooth proxy. |
 | `secrets.example.yaml` | Template for secrets. Copy to `secrets.yaml` and fill in. |
 | `secrets.yaml` | Your real WiFi creds / keys — **git-ignored, never committed.** |
 

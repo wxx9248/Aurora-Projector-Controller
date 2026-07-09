@@ -19,3 +19,14 @@ api:
 web_server:
   port: 80
   version: 3
+
+# Bluetooth proxy for HA (forwards BLE over the api: above; HA-only, not in
+# common.yaml). active: true enables outgoing BLE connections, not just scanning.
+esp32_ble_tracker:
+  scan_parameters:
+    interval: 1100ms
+    window: 1100ms
+    active: true
+
+bluetooth_proxy:
+  active: true
